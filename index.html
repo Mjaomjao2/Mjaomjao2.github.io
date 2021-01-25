@@ -220,7 +220,7 @@ var svg2 = d3.select("#my_dataviz2")
 d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
 
   // List of subgroups = header of the csv files = soil condition here
-  var subgroups = data.columns.slice(1).filter(function(d) {return d != "Avrage Total" })
+  var subgroups = data.columns.slice(1).filter(function(d) {return d != "Avrage_Total" })
 
   // List of groups = species here = value of the first column called group -> I show them on the X axis
   var list = ["Monokuma", "NoobKiz", "Ellakingen", "Lapalus"];
