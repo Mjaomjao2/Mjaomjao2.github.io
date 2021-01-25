@@ -24,7 +24,7 @@ var svg2 = d3.select("#my_dataviz2")
           "translate(" + margin.left + "," + margin.top + ")");
 
 // Parse the Data
-d3.csv("Self-Introduction to IVIS21 (Responses).csv", function(data) {
+d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
 
   // List of subgroups = header of the csv files = soil condition here
   var subgroups = data.columns.slice(1).filter(function(d) {return d != "Avrage Total" })

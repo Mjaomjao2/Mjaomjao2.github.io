@@ -22,6 +22,7 @@
 </style>
 
 <script>
+
 var highlightedPeople = new Array();
 
 // set the dimensions and margins of the graph
@@ -86,18 +87,18 @@ function rainbowStop(h) {
 
   // Highlight the specie that is hovered
 
-
-
   var toggleHighlight = function(d){
     var textbox = document.getElementById(d.Alias);
     if(highlightedPeople.includes(d.Alias)){
       highlightedPeople.splice(highlightedPeople.indexOf(d.Alias),1);
       textbox.style.border = "none";
+      textbox.style.background = "none";
       textbox.style.margin = "5px";
     }
     else{
       highlightedPeople.push(d.Alias);
       textbox.style.border = "2px solid #000000";
+      textbox.style.background = color(d.Alias);
       textbox.style.margin = "1px";
     }
     loadbar();
@@ -128,10 +129,17 @@ function rainbowStop(h) {
         document.getElementById("mouse").innerHTML = "Mouse hovers over: " + d.Alias;
     }
     var doNotHighlight = function(d){
-      d3.selectAll(".line")
-        .transition().duration(200).delay(1000)
-        .style("stroke", function(d){ return(color(d.Alias))} )
-        .style("opacity", "1")
+
+      d3.selectAll("." + d.Alias)
+        .transition().duration(200)
+        .style("stroke", color(d.Alias))
+        .style("opacity", "0.2")
+      highlightedPeople.forEach(function(alias) {
+        d3.selectAll("." + alias)
+          .transition().duration(200)
+          .style("stroke", color(alias))
+          .style("opacity", "1")
+      })
     }
 
   // The path function take a row of the csv as input, and return x and y coordinates of the line to draw for this raw.
@@ -152,7 +160,7 @@ function rainbowStop(h) {
        .style("opacity", 0.5)
        .on("mouseover", highlight)
        .on("click", toggleHighlight)
-       //.on("mouseleave", doNotHighlight )
+       .on("mouseleave", doNotHighlight )
 
    // Draw the axis:
    svg1.selectAll("myAxis")
@@ -179,7 +187,7 @@ function rainbowStop(h) {
            .data(data)
          .enter().append("div")
            .on("mouseover", highlight)
-           //.on("mouseout", doNotHighlight)
+           .on("mouseout", doNotHighlight)
            .on("click", toggleHighlight);
 
        table
@@ -199,6 +207,7 @@ function rainbowStop(h) {
 
 </script>
 <script>
+loadbar()
 function loadbar(){
   d3.selectAll("#my_dataviz2 > *").remove();
 // set the dimensions and margins of the graph
@@ -218,15 +227,14 @@ var svg2 = d3.select("#my_dataviz2")
 // Parse the Data
 
 d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
-
   // List of subgroups = header of the csv files = soil condition here
   var subgroups = data.columns.slice(1).filter(function(d) {return d != "Avrage_Total" })
+  data = data.filter(function(d) {return highlightedPeople.includes(d.Alias)})
 
   // List of groups = species here = value of the first column called group -> I show them on the X axis
   var list = ["Monokuma", "NoobKiz", "Ellakingen", "Lapalus"];
   //var list = ["test"];
   var alias = d3.map(data, function(d){return(d.Alias)}).keys().filter(function(d) {return highlightedPeople.includes(d) })
-
   // Add X axis
   var x = d3.scaleBand()
       .domain(alias)
@@ -266,16 +274,6 @@ d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
     .domain(subgroups)
     .range(colorArray)
 
-
-  console.log(data)
-  dataNormalized = []
-    data.forEach(function(d){
-      // Compute the total
-      tot = 0
-      for (i in subgroups){ name=subgroups[i] ; tot += +d[name] }
-      // Now normalize
-      for (i in subgroups){ name=subgroups[i] ; d[name] = d[name] / tot * 100}
-    })
   //stack the data? --> stack per subgroup
   var stackedData = d3.stack()
     .keys(subgroups)
@@ -334,7 +332,8 @@ d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
       .attr("class", function(d){ return "myRect " + d.key })
       .selectAll("rect")
       // enter a second time = loop subgroup per subgroup to add all rectangles
-      .data(function(d) { return d; })
+      .data(function(d) {
+        return d; })
       .enter().append("rect")
         .attr("x", function(d) { return x(d.data.Alias); })
         .attr("y", function(d) { return y(d[1]); })
@@ -352,8 +351,9 @@ d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
 
 
 
-sources https://codepen.io/mradamcole/pen/yWXyPz
-https://www.d3-graph-gallery.com/graph/parallel_custom.html
-http://bl.ocks.org/syntagmatic/3150059
-https://www.d3-graph-gallery.com/graph/barplot_stacked_percent.html
-https://www.d3-graph-gallery.com/graph/barplot_stacked_hover.html
+<p>code was based on these sources:</p>
+<p>https://codepen.io/mradamcole/pen/yWXyPz</p>
+<p>https://www.d3-graph-gallery.com/graph/parallel_custom.html</p>
+<p>http://bl.ocks.org/syntagmatic/3150059</p>
+<p>https://www.d3-graph-gallery.com/graph/barplot_stacked_percent.html</p>
+<p>https://www.d3-graph-gallery.com/graph/barplot_stacked_hover.html</p>
