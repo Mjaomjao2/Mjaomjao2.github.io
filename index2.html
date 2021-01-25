@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz2"></div>
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 20, left: 50},
+    width = 1700 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+// append the svg2 object to the body of the page
+var svg2 = d3.select("#my_dataviz2")
+  .append("svg2")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+// Parse the Data
+d3.csv("Self-Introduction to IVIS21 (Responses).csv", function(data) {
+
+  // List of subgroups = header of the csv files = soil condition here
+  var subgroups = data.columns.slice(1).filter(function(d) {return d != "Avrage Total" })
+
+  // List of groups = species here = value of the first column called group -> I show them on the X axis
+  //var list = ["Monokuma", "NoobKiz", "Ellakingen", "Lapalus"];
+  var list = ["test"];
+  var alias = d3.map(data, function(d){return(d.Alias)}).keys().filter(function(d) {return list.includes(d) })
+
+  // Add X axis
+  var x = d3.scaleBand()
+      .domain(alias)
+      .range([0, width])
+      .padding([0.2])
+  svg2.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).tickSizeOuter(0));
+
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, 100])
+    .range([ height, 0 ]);
+  svg2.append("g")
+    .call(d3.axisLeft(y));
+
+  // color palette = one color per subgroup
+  var colorArray = new Array(13);
+  for (var i=0; i < 13; i++){
+    var c = i / 13;
+    colorArray[i] = rainbowStop(c, 1, 0.5);
+  }
+  function rainbowStop(h) {
+    let f = (n, k = (n + h * 12) % 12) =>
+      0.5 - 0.5 * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    let rgb2hex = (r, g, b) =>
+      "#" +
+      [r, g, b]
+        .map(x =>
+          Math.round(x * 255)
+            .toString(16)
+            .padStart(2, 0)
+        )
+        .join("");
+    return rgb2hex(f(0), f(8), f(4));}
+  var color = d3.scaleOrdinal()
+    .domain(subgroups)
+    .range(colorArray)
+
+
+  console.log(data)
+  dataNormalized = []
+    data.forEach(function(d){
+      // Compute the total
+      tot = 0
+      for (i in subgroups){ name=subgroups[i] ; tot += +d[name] }
+      // Now normalize
+      for (i in subgroups){ name=subgroups[i] ; d[name] = d[name] / tot * 100}
+    })
+  //stack the data? --> stack per subgroup
+  var stackedData = d3.stack()
+    .keys(subgroups)
+    (data)
+
+
+
+
+  // ----------------
+  // Create a tooltip
+  // ----------------
+  var tooltip = d3.select("#my_dataviz2")
+    .append("div")
+    .style("opacity", 0)
+    .attr("class", "tooltip")
+    .style("background-color", "white")
+    .style("border", "solid")
+    .style("border-width", "1px")
+    .style("border-radius", "5px")
+    .style("padding", "10px")
+
+  // Three function that change the tooltip when user hover / move / leave a cell
+  var mouseover = function(d) {
+    var subgroupName = d3.select(this.parentNode).datum().key;
+    var subgroupValue = d.data[subgroupName];
+    tooltip
+        .html("subgroup: " + subgroupName + "<br>" + "Value: " + subgroupValue + " | " + d.data.Alias)
+        .style("opacity", 1)
+  }
+  var mousemove = function(d) {
+    tooltip
+      .style("left", (d3.mouse(this)[0]+90) + "px") // It is important to put the +90: other wise the tooltip is exactly where the point is an it creates a weird effect
+      .style("top", (d3.mouse(this)[1]) + "px")
+  }
+  var mouseleave = function(d) {
+    tooltip
+      .style("opacity", 0)
+  }
+
+
+
+
+  // Show the bars
+  svg2.append("g")
+    .selectAll("g")
+    // Enter in the stack data = loop key per key = group per group
+    .data(stackedData)
+    .enter().append("g")
+      .attr("fill", function(d) { return color(d.key); })
+      .selectAll("rect")
+      // enter a second time = loop subgroup per subgroup to add all rectangles
+      .data(function(d) { return d; })
+      .enter().append("rect")
+        .attr("x", function(d) { return x(d.data.Alias); })
+        .attr("y", function(d) { return y(d[1]); })
+        .attr("height", function(d) { return y(d[0]) - y(d[1]); })
+        .attr("width",x.bandwidth())
+        .attr("stroke", "grey")
+      .on("mouseover", mouseover)
+      .on("mousemove", mousemove)
+      .on("mouseleave", mouseleave)
+
+})
+
+</script>

@@ -1,7 +1,359 @@
-<html>
-<head>
-</head>
-<body>
-  <a href="chart_example_from_d3-graph-gallery.html"> test </a>
-</body>
-</html>
+<!-- Code from d3-graph-gallery.com -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+<div id="mouse">Mouse hovers over: </div>
+<div id="list">
+  Students
+  <p id="student_list"> </p>
+</div>
+
+<div id="my_dataviz2"> </div>
+
+<!-- A bit of style -->
+<style>
+
+
+</style>
+
+<script>
+var highlightedPeople = new Array();
+
+// set the dimensions and margins of the graph
+var margin = {top: 30, right: 10, bottom: 10, left: 0},
+  width = 1700 - margin.left - margin.right,
+  height = 500 - margin.top - margin.bottom;
+
+// append the svg1 object to the body of the page
+var svg1 = d3.select("#my_dataviz")
+.append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+.append("g")
+  .attr("transform",
+        "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+// Parse the Data
+d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
+
+var alias = d3.map(data, function(d){return(d.Alias)}).keys();
+var colorArray = new Array(43);
+for (var i=0; i < 43; i++){
+  var c = i / 43;
+  colorArray[i] = rainbowStop(c, 1, 0.5);
+}
+function rainbowStop(h) {
+  let f = (n, k = (n + h * 12) % 12) =>
+    0.5 - 0.5 * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+  let rgb2hex = (r, g, b) =>
+    "#" +
+    [r, g, b]
+      .map(x =>
+        Math.round(x * 255)
+          .toString(16)
+          .padStart(2, 0)
+      )
+      .join("");
+  return rgb2hex(f(0), f(8), f(4));}
+  var color = d3.scaleOrdinal()
+    .domain(alias)
+    .range(colorArray)
+
+  // Extract the list of dimensions we want to keep in the plot. Here I keep all except the column called Species
+  dimensions = d3.keys(data[0]).filter(function(d) { return d != "Alias"})
+
+  // For each dimension, I build a linear scale. I store all in a y object
+  var y = {}
+  for (i in dimensions) {
+    name = dimensions[i]
+    y[name] = d3.scaleLinear()
+      .domain( d3.extent(data, function(d) { return +d[name]; }) )
+      .range([height, 0])
+  }
+
+  // Build the X scale -> it find the best position for each Y axis
+  x = d3.scalePoint()
+    .range([0, width])
+    .padding(1)
+    .domain(dimensions);
+
+  // Highlight the specie that is hovered
+
+
+
+  var toggleHighlight = function(d){
+    var textbox = document.getElementById(d.Alias);
+    if(highlightedPeople.includes(d.Alias)){
+      highlightedPeople.splice(highlightedPeople.indexOf(d.Alias),1);
+      textbox.style.border = "none";
+      textbox.style.margin = "5px";
+    }
+    else{
+      highlightedPeople.push(d.Alias);
+      textbox.style.border = "2px solid #000000";
+      textbox.style.margin = "1px";
+    }
+    loadbar();
+  }
+    var highlight = function(d){
+        highExplain(d);
+        // first every group turns grey
+        d3.selectAll(".line")
+          .transition().duration(200)
+          .style("stroke", "lightgrey")
+          .style("opacity", "0.2")
+        // Second the hovered specie takes its color
+        d3.selectAll("." + d.Alias)
+          .transition().duration(200)
+          .style("stroke", color(d.Alias))
+          .style("opacity", "1")
+        highlightedPeople.forEach(function(alias) {
+          d3.selectAll("." + alias)
+            .transition().duration(200)
+            .style("stroke", color(alias))
+            .style("opacity", "1")
+        })
+
+    }
+
+      // Unhighlight
+    var highExplain = function(d){
+        document.getElementById("mouse").innerHTML = "Mouse hovers over: " + d.Alias;
+    }
+    var doNotHighlight = function(d){
+      d3.selectAll(".line")
+        .transition().duration(200).delay(1000)
+        .style("stroke", function(d){ return(color(d.Alias))} )
+        .style("opacity", "1")
+    }
+
+  // The path function take a row of the csv as input, and return x and y coordinates of the line to draw for this raw.
+  function path(d) {
+      return d3.line()(dimensions.map(function(p) { return [x(p), y[p](d[p])]; }));
+  }
+
+  // Draw the lines
+   svg1
+     .selectAll("myPath")
+     .data(data)
+     .enter()
+     .append("path")
+       .attr("class", function (d) { return "line " + d.Alias } ) // 2 class for each line: 'line' and the group name
+       .attr("d",  path)
+       .style("fill", "none" )
+       .style("stroke", function(d){ return(color(d.Species))} )
+       .style("opacity", 0.5)
+       .on("mouseover", highlight)
+       .on("click", toggleHighlight)
+       //.on("mouseleave", doNotHighlight )
+
+   // Draw the axis:
+   svg1.selectAll("myAxis")
+     // For each dimension of the dataset I add a 'g' element:
+     .data(dimensions).enter()
+     .append("g")
+     .attr("class", "axis")
+     // I translate this element to its right position on the x axis
+     .attr("transform", function(d) { return "translate(" + x(d) + ")"; })
+     // And I build the axis with the call function
+     .each(function(d) { d3.select(this).call(d3.axisLeft().ticks(5).scale(y[d])); })
+     // Add axis title
+     .append("text")
+       .style("text-anchor", "middle")
+       .attr("y", -9)
+       .text(function(d) { return d; })
+       .style("fill", "black")
+
+//test
+       var table = d3.select("#student_list")
+         .attr("id", "student")
+         .html("")
+         .selectAll(".row")
+           .data(data)
+         .enter().append("div")
+           .on("mouseover", highlight)
+           //.on("mouseout", doNotHighlight)
+           .on("click", toggleHighlight);
+
+       table
+         .append("span")
+           .style("background", function(d) { return color(d.Alias) })
+           .style("float", "left")
+
+       table
+         .append("span")
+           .attr("id", function(d) {return d.Alias})
+           .text(function(d) { return d.Alias; })
+           .style("float", "left")
+           .style("margin", "5px")
+
+})
+
+
+</script>
+<script>
+function loadbar(){
+  d3.selectAll("#my_dataviz2 > *").remove();
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 20, left: 50},
+    width = 1700 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+// append the svg2 object to the body of the page
+var svg2 = d3.select("#my_dataviz2")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+// Parse the Data
+
+d3.csv("Self-Introduction to IVIS21 (Responses).csv?", function(data) {
+
+  // List of subgroups = header of the csv files = soil condition here
+  var subgroups = data.columns.slice(1).filter(function(d) {return d != "Avrage Total" })
+
+  // List of groups = species here = value of the first column called group -> I show them on the X axis
+  var list = ["Monokuma", "NoobKiz", "Ellakingen", "Lapalus"];
+  //var list = ["test"];
+  var alias = d3.map(data, function(d){return(d.Alias)}).keys().filter(function(d) {return highlightedPeople.includes(d) })
+
+  // Add X axis
+  var x = d3.scaleBand()
+      .domain(alias)
+      .range([0, width])
+      .padding([0.2])
+  svg2.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).tickSizeOuter(0));
+
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, 100])
+    .range([ height, 0 ]);
+  svg2.append("g")
+    .call(d3.axisLeft(y));
+
+  // color palette = one color per subgroup
+  var colorArray = new Array(13);
+  for (var i=0; i < 13; i++){
+    var c = i / 13;
+    colorArray[i] = rainbowStop(c, 1, 0.5);
+  }
+  function rainbowStop(h) {
+    let f = (n, k = (n + h * 12) % 12) =>
+      0.5 - 0.5 * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    let rgb2hex = (r, g, b) =>
+      "#" +
+      [r, g, b]
+        .map(x =>
+          Math.round(x * 255)
+            .toString(16)
+            .padStart(2, 0)
+        )
+        .join("");
+    return rgb2hex(f(0), f(8), f(4));}
+  var color = d3.scaleOrdinal()
+    .domain(subgroups)
+    .range(colorArray)
+
+
+  console.log(data)
+  dataNormalized = []
+    data.forEach(function(d){
+      // Compute the total
+      tot = 0
+      for (i in subgroups){ name=subgroups[i] ; tot += +d[name] }
+      // Now normalize
+      for (i in subgroups){ name=subgroups[i] ; d[name] = d[name] / tot * 100}
+    })
+  //stack the data? --> stack per subgroup
+  var stackedData = d3.stack()
+    .keys(subgroups)
+    (data)
+
+
+
+
+  // ----------------
+  // Create a tooltip
+  // ----------------
+  var tooltip = d3.select("#my_dataviz2")
+    .append("div")
+    .style("opacity", 0)
+    .attr("class", "tooltip")
+    .style("background-color", "white")
+    .style("border", "solid")
+    .style("border-width", "1px")
+    .style("border-radius", "5px")
+    .style("padding", "10px")
+
+  // Three function that change the tooltip when user hover / move / leave a cell
+  var mouseover = function(d) {
+    var subgroupName = d3.select(this.parentNode).datum().key;
+    var subgroupValue = d.data[subgroupName];
+    tooltip
+        .html("subgroup: " + subgroupName + "<br>" + "Value: " + subgroupValue + " | " + d.data.Alias)
+        .style("opacity", 1)
+    d3.selectAll(".myRect").style("opacity", 0.2)
+    // Highlight all rects of this subgroup with opacity 0.8. It is possible to select them since they have a specific class = their name.
+    d3.selectAll("."+subgroupName)
+      .style("opacity", 1)
+  }
+  var mousemove = function(d) {
+    tooltip
+      .style("left", (d3.mouse(this)[0]+90) + "px") // It is important to put the +90: other wise the tooltip is exactly where the point is an it creates a weird effect
+      .style("top", (d3.mouse(this)[1]) + "px")
+  }
+  var mouseleave = function(d) {
+    tooltip
+      .style("opacity", 0)
+    d3.selectAll(".myRect")
+      .style("opacity",0.8)
+  }
+
+
+
+
+  // Show the bars
+  svg2.append("g")
+    .selectAll("g")
+    // Enter in the stack data = loop key per key = group per group
+    .data(stackedData)
+    .enter().append("g")
+      .attr("fill", function(d) { return color(d.key); })
+      .attr("class", function(d){ return "myRect " + d.key })
+      .selectAll("rect")
+      // enter a second time = loop subgroup per subgroup to add all rectangles
+      .data(function(d) { return d; })
+      .enter().append("rect")
+        .attr("x", function(d) { return x(d.data.Alias); })
+        .attr("y", function(d) { return y(d[1]); })
+        .attr("height", function(d) { return y(d[0]) - y(d[1]); })
+        .attr("width",x.bandwidth())
+        .attr("stroke", "grey")
+      .on("mouseover", mouseover)
+      .on("mousemove", mousemove)
+      .on("mouseleave", mouseleave)
+
+})
+}
+
+</script>
+
+
+
+sources https://codepen.io/mradamcole/pen/yWXyPz
+https://www.d3-graph-gallery.com/graph/parallel_custom.html
+http://bl.ocks.org/syntagmatic/3150059
+https://www.d3-graph-gallery.com/graph/barplot_stacked_percent.html
+https://www.d3-graph-gallery.com/graph/barplot_stacked_hover.html
