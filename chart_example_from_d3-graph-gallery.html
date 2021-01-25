@@ -141,7 +141,8 @@ function rainbowStop(h) {
        .style("fill", "none" )
        .style("stroke", function(d){ return(color(d.Species))} )
        .style("opacity", 0.5)
-       //.on("mouseover", highlight)
+       .on("mouseover", highlight)
+       .on("click", toggleHighlight)
        //.on("mouseleave", doNotHighlight )
 
    // Draw the axis:
